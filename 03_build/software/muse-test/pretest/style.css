@@ -1,0 +1,324 @@
+/* 读心冠 · Muse 2 连接测试 — CSS */
+
+:root {
+  --bg: #13111a;
+  --panel: #1c1926;
+  --line: #2e2a3b;
+  --ink: #ece8f2;
+  --mut: #9a94a8;
+  --gold: #c9a24a;
+  --good: #4cc38a;
+  --fair: #e0b341;
+  --bad: #e5604f;
+  --ch0: #7aa7ff;
+  --ch1: #f08ad0;
+  --ch2: #ffb86b;
+  --ch3: #6fe0c8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* ===== 顶部标题栏 ===== */
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+header h1 {
+  font-size: 18px;
+  margin: 0 12px 0 0;
+  letter-spacing: 0.5px;
+}
+
+header h1 span {
+  color: var(--gold);
+}
+
+/* ===== 状态标签 ===== */
+.chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--mut);
+}
+
+.chip b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.chip.ok b {
+  color: var(--good);
+}
+
+.chip.warn b {
+  color: var(--fair);
+}
+
+.chip.err b {
+  color: var(--bad);
+}
+
+/* ===== 工具栏 ===== */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bar .sep {
+  width: 1px;
+  height: 24px;
+  background: var(--line);
+  margin: 0 6px;
+}
+
+/* ===== 按钮与下拉框 ===== */
+button,
+select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--gold);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--gold);
+  color: #1a1408;
+  border-color: var(--gold);
+  font-weight: 600;
+}
+
+button.rec {
+  border-color: var(--bad);
+}
+
+button.rec.on {
+  background: var(--bad);
+  color: #fff;
+}
+
+kbd {
+  font: 11px ui-monospace, monospace;
+  background: #0e0c13;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
+  color: var(--mut);
+}
+
+/* ===== 主布局 ===== */
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+@media (max-width: 1000px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== 卡片 ===== */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.card h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: var(--gold);
+  letter-spacing: 0.5px;
+}
+
+/* ===== 波形画布 ===== */
+#wave {
+  width: 100%;
+  height: 440px;
+  display: block;
+  background: #0e0c13;
+  border-radius: 8px;
+}
+
+/* ===== 通用 ===== */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line);
+  flex: none;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.muted {
+  color: var(--mut);
+  font-size: 12px;
+}
+
+.big {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+input[type="range"] {
+  width: 140px;
+}
+
+/* ===== 表格 ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+td,
+th {
+  padding: 4px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+th {
+  color: var(--mut);
+  font-weight: 500;
+}
+
+/* ===== 频段功率条 ===== */
+.bands {
+  display: flex;
+  height: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #0e0c13;
+  min-width: 120px;
+}
+
+.bands i {
+  display: block;
+  height: 100%;
+}
+
+.legend {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--mut);
+  margin-top: 6px;
+}
+
+.legend span::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-right: 4px;
+  background: var(--c);
+}
+
+/* ===== 眨眼指示灯 ===== */
+#blinkLamp {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #0e0c13;
+  border: 2px solid var(--line);
+  transition: background 0.08s;
+}
+
+#blinkLamp.on {
+  background: var(--gold);
+  box-shadow: 0 0 18px var(--gold);
+}
+
+/* ===== 引导测试提示 ===== */
+#guide {
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  background: #0e0c13;
+  margin: 8px 0;
+}
+
+#guide.open {
+  color: var(--good);
+}
+
+#guide.closed {
+  color: var(--ch0);
+}
+
+/* ===== 日志 ===== */
+#log {
+  height: 120px;
+  overflow: auto;
+  background: #0e0c13;
+  border-radius: 8px;
+  padding: 8px;
+  font: 12px/1.5 ui-monospace, monospace;
+  color: var(--mut);
+}
+
+/* ===== 使用说明 ===== */
+details {
+  margin: 0 20px 16px;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--gold);
+}
+
+details ol {
+  color: var(--mut);
+  margin: 8px 0;
+}

@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>读心冠 · Muse 2 连接测试</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1><span>读心冠</span> · Muse 2 连接测试</h1>
+  <div class="chip" id="chipBt">Web Bluetooth：<b>检测中</b></div>
+  <div class="chip" id="chipSec">安全环境：<b>检测中</b></div>
+  <div class="chip" id="chipConn">状态：<b>未连接</b></div>
+  <div class="chip">电量：<b id="battery">—</b></div>
+  <div class="chip">丢包：<b id="lost">0</b></div>
+  <div class="chip">采样率：<b id="rate">—</b></div>
+</header>
+
+<div class="bar">
+  <button class="primary" id="btnConnect">连接 Muse 2</button>
+  <button id="btnSim">模拟模式</button>
+  <button id="btnDisconnect" disabled>断开</button>
+  <div class="sep"></div>
+  <button class="rec" id="btnRec" disabled>● 开始录制</button>
+  <button id="btnExport" disabled>导出 CSV</button>
+  <span class="muted" id="recInfo"></span>
+  <div class="sep"></div>
+  <button data-mk="eyes_open">睁眼 <kbd>O</kbd></button>
+  <button data-mk="eyes_closed">闭眼 <kbd>C</kbd></button>
+  <button data-mk="blink">眨眼 <kbd>B</kbd></button>
+  <button data-mk="mark">标记 <kbd>M</kbd></button>
+  <div class="sep"></div>
+  <label class="muted">纵轴 <select id="scale">
+    <option value="50">±50 µV</option><option value="100" selected>±100 µV</option>
+    <option value="200">±200 µV</option><option value="500">±500 µV</option></select></label>
+</div>
+
+<details>
+  <summary>使用说明</summary>
+  <ol>
+    <li>用 <b>Chrome 或 Edge</b>（电脑版）打开。Safari 和 Firefox 不支持 Web Bluetooth。</li>
+    <li>如果点"连接"没反应，或者顶部显示"安全环境：否"：在这个文件夹里打开终端，运行 <span class="mono">python3 -m http.server 8000</span>，再用浏览器打开 <span class="mono">http://localhost:8000</span>。</li>
+    <li>先关掉手机上的 Muse App（头环同一时间只能连一个设备）。长按头环按钮开机，灯开始闪烁后点"连接 Muse 2"。</li>
+    <li>佩戴：前额的传感器贴紧皮肤（擦掉油脂、拨开刘海），耳后的电极贴紧耳后皮肤。等 1–2 分钟让信号稳定。</li>
+    <li>没有头环时，可以点"模拟模式"先熟悉界面（模拟数据会在闭眼时增强 α 波，并随机产生眨眼）。</li>
+    <li>信号质量是根据最近 1 秒波形估算的，仅供参考：佩戴初期、说话、咬牙、转头都会变差。</li>
+  </ol>
+</details>
+
+<main>
+  <div>
+    <div class="card">
+      <h2>实时脑电波形（最近 5 秒）</h2>
+      <canvas id="wave"></canvas>
+      <div class="muted" style="margin-top:6px">TP9/TP10 = 左/右耳后 · AF7/AF8 = 左/右前额（眨眼会在这两个通道产生大尖峰）</div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>阶段 1 引导测试：睁眼 / 闭眼 α 波对比</h2>
+      <div class="row">
+        <label class="muted">每段时长
+          <select id="phaseLen"><option value="30">30 秒</option><option value="60" selected>60 秒</option></select></label>
+        <label class="muted">循环次数
+          <select id="phaseRep"><option>1</option><option>2</option><option selected>3</option></select></label>
+        <button id="btnGuide" disabled>开始引导测试</button>
+        <button id="btnGuideStop" disabled>停止</button>
+      </div>
+      <div id="guide">—</div>
+      <div class="muted">开始后会自动录制并打上睁眼/闭眼标记。每次切换会响一声提示音，闭眼时听到提示音再睁眼。测试期间尽量放松、不动、不说话。</div>
+      <table style="margin-top:10px">
+        <tr><th></th><th>睁眼</th><th>闭眼</th><th>闭眼/睁眼</th></tr>
+        <tr><td>耳后 α 功率（TP9+TP10，相对单位）</td><td class="mono" id="aOpen">—</td><td class="mono" id="aClosed">—</td><td class="mono" id="aRatio">—</td></tr>
+      </table>
+      <div class="muted" id="aVerdict" style="margin-top:6px">闭眼时 α 波（8–13 Hz）通常会明显增强。比值大于 1.5 说明设备测到了真实脑电。</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>信号质量（估算）</h2>
+      <table id="qTable">
+        <tr><th>通道</th><th>质量</th><th>波动 (µV)</th></tr>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>眨眼检测（AF7 + AF8）</h2>
+      <div class="row">
+        <div id="blinkLamp"></div>
+        <div><div class="big" id="blinkCount">0</div><div class="muted">次眨眼</div></div>
+        <button id="btnBlinkReset" style="margin-left:auto">清零</button>
+      </div>
+      <div class="row muted">阈值 <input type="range" id="blinkThr" min="30" max="300" value="90"> <span class="mono" id="blinkThrVal">90 µV</span></div>
+      <div class="muted">刻意眨几下眼，灯应该会亮。如果没反应就调低阈值，误报太多就调高。</div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>频段相对功率（最近 2 秒）</h2>
+      <table id="bTable"><tr><th>通道</th><th>δ θ α β</th><th>θ%</th><th>α%</th></tr></table>
+      <div class="legend">
+        <span style="--c:#5b5470">δ 1–4</span><span style="--c:#c77dff">θ 4–8</span>
+        <span style="--c:#4cc38a">α 8–13</span><span style="--c:#e0b341">β 13–30 Hz</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>日志</h2>
+      <div id="log"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ===================== 常量 ===================== */
+const FS = 256;                         // Muse EEG 采样率
+const CH = ['TP9','AF7','AF8','TP10'];
+const CH_COLORS = ['--ch0','--ch1','--ch2','--ch3'].map(v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim());
+const MUSE_SERVICE = 0xfe8d;
+const U = s => `273e${s}-4c4d-454d-96be-f03bac821358`;
+const CONTROL_UUID = U('0001');
+const TELEMETRY_UUID = U('000b');
+const EEG_UUIDS = [U('0003'), U('0004'), U('0005'), U('0006')]; // TP9, AF7, AF8, TP10
+
+/* ===================== 小工具 ===================== */
+const $ = id => document.getElementById(id);
+function log(msg){
+  const t = new Date().toLocaleTimeString();
+  $('log').insertAdjacentHTML('beforeend', `<div>[${t}] ${msg}</div>`);
+  $('log').scrollTop = 1e9;
+}
+class Ring {
+  constructor(n){ this.buf = new Float32Array(n); this.n = n; this.i = 0; this.count = 0; }
+  push(v){ this.buf[this.i] = v; this.i = (this.i + 1) % this.n; this.count++; }
+  last(k){ k = Math.min(k, this.n, this.count); const out = new Float32Array(k);
+    for (let j = 0; j < k; j++) out[j] = this.buf[(this.i - k + j + this.n) % this.n]; return out; }
+}
+
+/* ===================== 状态 ===================== */
+const rings = CH.map(() => new Ring(FS * 10));
+let mode = null;               // 'muse' | 'sim' | null
+let device = null, controlChar = null;
+let pending = new Map();       // packetIndex -> {t, ch:[...]}
+let lastIndex = null, lostPackets = 0;
+let sampleTimes = [];          // 用于估算实际采样率
+let recording = false, recStart = 0, recRows = [];
+let nextMarker = '';
+let eyesState = null;          // 'open' | 'closed' | null
+let alphaStats = { open: [], closed: [] };
+let blinkCount = 0, blinkBaseline = 0, blinkRefractoryUntil = 0;
+let blinkFlag = 0;
+
+/* ===================== 环境检测 ===================== */
+(function checkEnv(){
+  const bt = 'bluetooth' in navigator;
+  $('chipBt').className = 'chip ' + (bt ? 'ok' : 'err');
+  $('chipBt').querySelector('b').textContent = bt ? '支持' : '不支持（请用 Chrome/Edge）';
+  $('chipSec').className = 'chip ' + (window.isSecureContext ? 'ok' : 'err');
+  $('chipSec').querySelector('b').textContent = window.isSecureContext ? '是' : '否（见使用说明第 2 步）';
+  if (!bt) $('btnConnect').disabled = true;
+})();
+
+function setConn(text, cls){
+  $('chipConn').className = 'chip ' + (cls || '');
+  $('chipConn').querySelector('b').textContent = text;
+}
+function setRunning(on){
+  $('btnConnect').disabled = on || !('bluetooth' in navigator);
+  $('btnSim').disabled = on;
+  $('btnDisconnect').disabled = !on;
+  $('btnRec').disabled = !on;
+  $('btnGuide').disabled = !on;
+}
+
+/* ===================== Muse 协议 ===================== */
+function encodeCommand(cmd){
+  const enc = new TextEncoder().encode(`X${cmd}\n`);
+  enc[0] = enc.length - 1;
+  return enc;
+}
+async function sendCommand(cmd){
+  if (!controlChar) return;
+  const data = encodeCommand(cmd);
+  if (controlChar.writeValueWithoutResponse) {
+    try { await controlChar.writeValueWithoutResponse(data); return; } catch (e) { /* 回退 */ }
+  }
+  await controlChar.writeValue(data);
+}
+function decodeEEG(dataView){
+  const index = dataView.getUint16(0);
+  const b = new Uint8Array(dataView.buffer, dataView.byteOffset + 2, dataView.byteLength - 2);
+  const raw = [];
+  for (let i = 0; i < b.length; i++) {
+    if (i % 3 === 0) raw.push((b[i] << 4) | (b[i + 1] >> 4));
+    else { raw.push(((b[i] & 0x0f) << 8) | b[i + 1]); i++; }
+  }
+  return { index, samples: raw.map(n => 0.48828125 * (n - 0x800)) };  // µV
+}
+
+async function connectMuse(){
+  try {
+    setConn('请在弹窗中选择设备…', 'warn');
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: 'Muse' }],
+      optionalServices: [MUSE_SERVICE]
+    });
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+    setConn('连接中…', 'warn');
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService(MUSE_SERVICE);
+    controlChar = await service.getCharacteristic(CONTROL_UUID);
+
+    try {
+      const tele = await service.getCharacteristic(TELEMETRY_UUID);
+      await tele.startNotifications();
+      tele.addEventListener('characteristicvaluechanged', e => {
+        const dv = e.target.value;
+        $('battery').textContent = (dv.getUint16(2) / 512).toFixed(0) + '%';
+      });
+    } catch (e) { log('电量信息不可用（不影响测试）'); }
+
+    for (let c = 0; c < 4; c++) {
+      const ch = await service.getCharacteristic(EEG_UUIDS[c]);
+      await ch.startNotifications();
+      ch.addEventListener('characteristicvaluechanged', e => {
+        const { index, samples } = decodeEEG(e.target.value);
+        onChannelPacket(c, index, samples);
+      });
+    }
+    // 启动数据流：暂停 → 预设 p21（4 通道 EEG）→ 开始 → 继续
+    await sendCommand('h');
+    await sendCommand('p21');
+    await sendCommand('s');
+    await sendCommand('d');
+
+    mode = 'muse';
+    resetStream();
+    setConn('已连接：' + (device.name || 'Muse'), 'ok');
+    setRunning(true);
+    log('已连接 ' + (device.name || 'Muse') + '，开始接收数据');
+  } catch (e) {
+    setConn('未连接', 'err');
+    log('连接失败：' + e.message);
+  }
+}
+
+function onDisconnected(){
+  if (mode !== 'muse') return;
+  log('设备已断开');
+  stopAll();
+}
+
+async function disconnect(){
+  if (mode === 'muse' && device) {
+    try { await sendCommand('h'); } catch (e) {}
+    try { device.gatt.disconnect(); } catch (e) {}
+  }
+  if (mode === 'sim') stopSim();
+  stopAll();
+}
+
+function stopAll(){
+  stopGuide(true);
+  mode = null; controlChar = null;
+  setConn('未连接', '');
+  setRunning(false);
+  if (recording) toggleRec();
+}
+
+/* ===================== 数据汇合（4 个通道按包号对齐） ===================== */
+function resetStream(){
+  pending.clear(); lastIndex = null; lostPackets = 0; sampleTimes = [];
+  $('lost').textContent = '0';
+}
+
+function onChannelPacket(c, index, samples){
+  const now = performance.now();
+  let entry = pending.get(index);
+  if (!entry) { entry = { t: now, ch: [null, null, null, null] }; pending.set(index, entry); }
+  entry.ch[c] = samples;
+  if (entry.ch.every(Boolean)) { pending.delete(index); emitPacket(index, entry); }
+  // 清理超过 1 秒还没凑齐的包
+  if (pending.size > 20) {
+    for (const [k, v] of pending) if (now - v.t > 1000) pending.delete(k);
+  }
+}
+
+function emitPacket(index, entry){
+  if (lastIndex !== null) {
+    const gap = (index - lastIndex + 0x10000) % 0x10000;
+    if (gap > 1 && gap < 1000) { lostPackets += gap - 1; $('lost').textContent = lostPackets; }
+  }
+  lastIndex = index;
+  const dt = 1000 / FS;
+  for (let k = 0; k < 12; k++) {
+    const t = entry.t - (11 - k) * dt;
+    const v = [entry.ch[0][k], entry.ch[1][k], entry.ch[2][k], entry.ch[3][k]];
+    for (let c = 0; c < 4; c++) rings[c].push(v[c]);
+    detectBlink((v[1] + v[2]) / 2, t);
+    if (recording) {
+      if (recStart === null) recStart = t;
+      recRows.push([(t - recStart).toFixed(1), index, v[0].toFixed(2), v[1].toFixed(2), v[2].toFixed(2), v[3].toFixed(2), nextMarker, blinkFlag]);
+      nextMarker = ''; blinkFlag = 0;
+    }
+  }
+  sampleTimes.push(entry.t);
+  if (sampleTimes.length > 60) sampleTimes.shift();
+}
+
+/* ===================== 眨眼检测 ===================== */
+function detectBlink(v, t){
+  // 用慢速滑动平均作为基线，偏离基线超过阈值即判定为眨眼
+  blinkBaseline += (v - blinkBaseline) * (1 / FS);
+  const thr = +$('blinkThr').value;
+  if (Math.abs(v - blinkBaseline) > thr && t > blinkRefractoryUntil) {
+    blinkRefractoryUntil = t + 350;
+    blinkCount++; blinkFlag = 1;
+    $('blinkCount').textContent = blinkCount;
+    const lamp = $('blinkLamp'); lamp.classList.add('on');
+    setTimeout(() => lamp.classList.remove('on'), 180);
+  }
+}
+
+/* ===================== 模拟模式 ===================== */
+let simTimer = null, simIndex = 0, simT = 0, simNextBlink = 0;
+function gauss(){ let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function startSim(){
+  mode = 'sim'; resetStream(); simIndex = 0; simT = 0; simNextBlink = 2;
+  const ph = [0, 0, 0, 0].map(() => Math.random() * 6.28);
+  let blinkStart = -10;
+  simTimer = setInterval(() => {
+    const packets = [[], [], [], []];
+    for (let k = 0; k < 12; k++) {
+      simT += 1 / FS;
+      if (simT > simNextBlink) { blinkStart = simT; simNextBlink = simT + 2 + Math.random() * 4; }
+      const closed = eyesState === 'closed';
+      const blink = closed ? 0 : 160 * Math.exp(-Math.pow((simT - blinkStart - 0.1) / 0.06, 2));
+      for (let c = 0; c < 4; c++) {
+        const ear = c === 0 || c === 3;
+        const alphaAmp = ear ? (closed ? 22 : 6) : (closed ? 10 : 3);
+        let x = 7 * gauss()
+              + alphaAmp * Math.sin(2 * Math.PI * 10 * simT + ph[c])
+              + 4 * Math.sin(2 * Math.PI * 6 * simT + ph[c] * 2)
+              + 3 * Math.sin(2 * Math.PI * 1.2 * simT);
+        if (!ear) x += blink;
+        packets[c].push(x);
+      }
+    }
+    const idx = simIndex = (simIndex + 1) % 0x10000;
+    for (let c = 0; c < 4; c++) onChannelPacket(c, idx, packets[c]);
+  }, 1000 * 12 / FS);
+  setConn('模拟模式', 'warn');
+  setRunning(true);
+  $('battery').textContent = '—';
+  log('已进入模拟模式（数据是合成的，只用来熟悉界面）');
+}
+function stopSim(){ clearInterval(simTimer); simTimer = null; }
+
+/* ===================== 录制与导出 ===================== */
+function toggleRec(){
+  recording = !recording;
+  const b = $('btnRec');
+  if (recording) {
+    recRows = []; recStart = null; nextMarker = 'rec_start'; blinkFlag = 0;
+    b.classList.add('on'); b.textContent = '■ 停止录制';
+    $('btnExport').disabled = true;
+    log('开始录制' + (mode === 'sim' ? '（模拟数据）' : ''));
+  } else {
+    b.classList.remove('on'); b.textContent = '● 开始录制';
+    $('btnExport').disabled = recRows.length === 0;
+    log(`停止录制，共 ${recRows.length} 个采样点（${(recRows.length / FS).toFixed(1)} 秒）`);
+  }
+}
+setInterval(() => {
+  if (recording) $('recInfo').textContent = `录制中 ${(recRows.length / FS).toFixed(0)} 秒`;
+  else $('recInfo').textContent = recRows.length ? `已录 ${(recRows.length / FS).toFixed(0)} 秒，可导出` : '';
+}, 500);
+
+function exportCSV(){
+  const head = 'time_ms,packet_index,TP9,AF7,AF8,TP10,marker,blink_auto';
+  const body = recRows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([head + '\n' + body + '\n'], { type: 'text/csv' });
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const name = `muse_${mode === 'sim' ? 'SIM_' : ''}${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.csv`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  log('已导出 ' + name);
+}
+
+/* ===================== 标记 ===================== */
+function addMarker(mk){
+  if (!mode) return;
+  nextMarker = nextMarker ? nextMarker + '|' + mk : mk;
+  if (mk === 'eyes_open') eyesState = 'open';
+  if (mk === 'eyes_closed') eyesState = 'closed';
+  log('标记：' + mk + (recording ? '' : '（未在录制，只影响 α 统计）'));
+}
+document.querySelectorAll('[data-mk]').forEach(b => b.addEventListener('click', () => addMarker(b.dataset.mk)));
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  const map = { o: 'eyes_open', c: 'eyes_closed', b: 'blink', m: 'mark' };
+  const mk = map[e.key.toLowerCase()];
+  if (mk) addMarker(mk);
+});
+
+/* ===================== 引导测试 ===================== */
+let guideTimer = null;
+let audioCtx = null;
+function beep(freq = 660, dur = 0.25){
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = freq; g.gain.value = 0.15;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch (e) {}
+}
+function startGuide(){
+  const len = +$('phaseLen').value, reps = +$('phaseRep').value;
+  const phases = [];
+  for (let r = 0; r < reps; r++) { phases.push('open', 'closed'); }
+  alphaStats = { open: [], closed: [] };
+  if (!recording) toggleRec();
+  addMarker('guide_start');
+  let p = 0, left = len;
+  const enter = () => {
+    const ph = phases[p];
+    addMarker(ph === 'open' ? 'eyes_open' : 'eyes_closed');
+    beep(ph === 'open' ? 880 : 520, 0.3);
+  };
+  enter();
+  $('btnGuide').disabled = true; $('btnGuideStop').disabled = false;
+  const tick = () => {
+    const ph = phases[p];
+    $('guide').className = ph === 'open' ? 'open' : 'closed';
+    $('guide').textContent = `${ph === 'open' ? '睁眼，看着屏幕中央' : '闭上眼睛，放松'} · ${left} 秒 · 第 ${p + 1}/${phases.length} 段`;
+    left--;
+    if (left < 0) {
+      p++; left = len;
+      if (p >= phases.length) { finishGuide(); return; }
+      enter();
+    }
+  };
+  tick();
+  guideTimer = setInterval(tick, 1000);
+  log(`引导测试开始：${reps} 轮 × (睁眼 ${len}s + 闭眼 ${len}s)`);
+}
+function finishGuide(){
+  clearInterval(guideTimer); guideTimer = null;
+  addMarker('guide_end'); beep(990, 0.5);
+  eyesState = null;
+  $('guide').className = ''; $('guide').textContent = '测试完成，请睁眼。记得点"停止录制"再导出 CSV';
+  $('btnGuide').disabled = !mode; $('btnGuideStop').disabled = true;
+  log('引导测试完成');
+}
+function stopGuide(silent){
+  if (!guideTimer) return;
+  clearInterval(guideTimer); guideTimer = null;
+  eyesState = null;
+  $('guide').className = ''; $('guide').textContent = '已停止';
+  $('btnGuide').disabled = !mode; $('btnGuideStop').disabled = true;
+  if (!silent) { addMarker('guide_stop'); log('引导测试被手动停止'); }
+}
+
+/* ===================== 频谱分析 ===================== */
+const NFFT = 512;
+const hann = new Float64Array(NFFT).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (NFFT - 1)));
+function powerSpectrum(sig){
+  const N = NFFT, re = new Float64Array(N), im = new Float64Array(N);
+  let mean = 0; for (let i = 0; i < N; i++) mean += sig[i]; mean /= N;
+  for (let i = 0; i < N; i++) re[i] = (sig[i] - mean) * hann[i];
+  for (let i = 1, j = 0; i < N; i++) {
+    let bit = N >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; }
+  }
+  for (let len = 2; len <= N; len <<= 1) {
+    const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < N; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const a = i + k, b = a + len / 2;
+        const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+      }
+    }
+  }
+  const p = new Float64Array(N / 2);
+  for (let k = 0; k < N / 2; k++) p[k] = (re[k] * re[k] + im[k] * im[k]) / N;
+  return p;  // 频率分辨率 = FS/NFFT = 0.5 Hz
+}
+function bandSum(p, lo, hi){
+  const df = FS / NFFT; let s = 0;
+  for (let k = Math.ceil(lo / df); k < Math.ceil(hi / df); k++) s += p[k];
+  return s;
+}
+
+/* ===================== 周期性分析：质量 / 频段 / α 统计 ===================== */
+(function buildTables(){
+  CH.forEach((name, c) => {
+    $('qTable').insertAdjacentHTML('beforeend',
+      `<tr><td style="color:${CH_COLORS[c]}">${name}</td><td><span class="row" style="margin:0"><span class="dot" id="qd${c}"></span><span id="ql${c}">—</span></span></td><td class="mono" id="qs${c}">—</td></tr>`);
+    $('bTable').insertAdjacentHTML('beforeend',
+      `<tr><td style="color:${CH_COLORS[c]}">${name}</td><td><div class="bands" id="bb${c}"></div></td><td class="mono" id="bt${c}">—</td><td class="mono" id="ba${c}">—</td></tr>`);
+  });
+})();
+
+function quality(seg){
+  let mean = 0, maxAbs = 0;
+  for (const v of seg) { mean += v; maxAbs = Math.max(maxAbs, Math.abs(v)); }
+  mean /= seg.length;
+  let sd = 0; for (const v of seg) sd += (v - mean) ** 2; sd = Math.sqrt(sd / seg.length);
+  if (maxAbs > 900) return { sd, label: '饱和/未贴紧', color: 'var(--bad)' };
+  if (sd < 1) return { sd, label: '无信号', color: 'var(--bad)' };
+  if (sd <= 30) return { sd, label: '良好', color: 'var(--good)' };
+  if (sd <= 80) return { sd, label: '一般', color: 'var(--fair)' };
+  return { sd, label: '差', color: 'var(--bad)' };
+}
+
+setInterval(() => {
+  if (!mode || rings[0].count < NFFT) return;
+  // 实际采样率
+  if (sampleTimes.length > 10) {
+    const span = (sampleTimes[sampleTimes.length - 1] - sampleTimes[0]) / 1000;
+    $('rate').textContent = span > 0 ? Math.round((sampleTimes.length - 1) * 12 / span) + ' Hz' : '—';
+  }
+  let earAlpha = 0;
+  for (let c = 0; c < 4; c++) {
+    const q = quality(rings[c].last(FS));
+    $('qd' + c).style.background = q.color;
+    $('ql' + c).textContent = q.label;
+    $('qs' + c).textContent = q.sd.toFixed(1);
+
+    const p = powerSpectrum(rings[c].last(NFFT));
+    const d = bandSum(p, 1, 4), th = bandSum(p, 4, 8), a = bandSum(p, 8, 13), b = bandSum(p, 13, 30);
+    const tot = d + th + a + b || 1;
+    $('bb' + c).innerHTML =
+      `<i style="width:${d / tot * 100}%;background:#5b5470"></i><i style="width:${th / tot * 100}%;background:#c77dff"></i>` +
+      `<i style="width:${a / tot * 100}%;background:#4cc38a"></i><i style="width:${b / tot * 100}%;background:#e0b341"></i>`;
+    $('bt' + c).textContent = (th / tot * 100).toFixed(0);
+    $('ba' + c).textContent = (a / tot * 100).toFixed(0);
+    if (c === 0 || c === 3) earAlpha += a / 2;
+  }
+  if (eyesState) {
+    alphaStats[eyesState].push(earAlpha);
+    const m = arr => arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null;
+    const o = m(alphaStats.open), cl = m(alphaStats.closed);
+    $('aOpen').textContent = o == null ? '—' : o.toFixed(1);
+    $('aClosed').textContent = cl == null ? '—' : cl.toFixed(1);
+    if (o && cl) {
+      const r = cl / o;
+      $('aRatio').textContent = r.toFixed(2) + '×';
+      $('aVerdict').innerHTML = r > 1.5
+        ? '<span style="color:var(--good)">✓ 闭眼时 α 明显增强，设备测到的应该是真实脑电。</span>'
+        : '<span style="color:var(--fair)">α 增强不明显。检查耳后电极是否贴紧、测试时是否真的放松闭眼，然后再测一次。</span>';
+    }
+  }
+}, 250);
+
+/* ===================== 绘制波形 ===================== */
+const cv = $('wave'), ctx = cv.getContext('2d');
+function fitCanvas(){
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  cv.width = r.width * dpr; cv.height = r.height * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', fitCanvas); fitCanvas();
+
+function draw(){
+  const W = cv.clientWidth, H = cv.clientHeight, laneH = H / 4, N = FS * 5;
+  const scale = +$('scale').value;
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = '#221f2c'; ctx.lineWidth = 1;
+  for (let s = 1; s < 5; s++) { const x = W * s / 5; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let c = 0; c < 4; c++) {
+    const mid = laneH * c + laneH / 2;
+    ctx.strokeStyle = '#2e2a3b'; ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
+    ctx.fillStyle = CH_COLORS[c]; ctx.font = '12px ui-monospace,monospace'; ctx.fillText(CH[c], 8, laneH * c + 16);
+    const seg = rings[c].last(N);
+    if (seg.length < 2) continue;
+    let mean = 0; for (const v of seg) mean += v; mean /= seg.length;
+    ctx.strokeStyle = CH_COLORS[c]; ctx.lineWidth = 1.2; ctx.beginPath();
+    const x0 = W - (seg.length / N) * W;
+    for (let i = 0; i < seg.length; i++) {
+      const x = x0 + (i / N) * W;
+      let y = mid - ((seg[i] - mean) / scale) * (laneH / 2);
+      y = Math.max(laneH * c + 1, Math.min(laneH * (c + 1) - 1, y));
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#5c566b'; ctx.font = '11px ui-monospace,monospace';
+  ctx.fillText(`±${scale} µV / 通道 · 每格 1 秒`, W - 170, H - 6);
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+/* ===================== 按钮绑定 ===================== */
+$('btnConnect').onclick = connectMuse;
+$('btnSim').onclick = startSim;
+$('btnDisconnect').onclick = disconnect;
+$('btnRec').onclick = toggleRec;
+$('btnExport').onclick = exportCSV;
+$('btnGuide').onclick = startGuide;
+$('btnGuideStop').onclick = () => stopGuide(false);
+$('btnBlinkReset').onclick = () => { blinkCount = 0; $('blinkCount').textContent = 0; };
+$('blinkThr').oninput = e => $('blinkThrVal').textContent = e.target.value + ' µV';
+log('页面已就绪。没有头环时可以点"模拟模式"试用。');
+</script>
+</body>
+</html>

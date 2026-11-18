@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>读心冠 · 阶段 2 犹豫判定测试</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="questions.js" defer></script>
+    <script src="app.js" defer></script>
+</head>
+
+<body>
+
+<!-- 顶部状态栏（实验进行中会收起） -->
+<header id="topbar">
+    <h1><span>读心冠</span> · 阶段 2 犹豫判定测试</h1>
+    <div class="chip" id="chipConn">EEG：<b>未连接</b></div>
+    <div class="chip">电量：<b id="battery">—</b></div>
+    <div class="chip">丢包：<b id="lost">0</b></div>
+    <div class="quality" id="quality"></div>
+    <div class="spacer"></div>
+    <button class="primary" id="btnConnect">连接 Muse 2</button>
+    <button id="btnSim">模拟模式</button>
+    <button id="btnDisconnect" disabled>断开</button>
+</header>
+
+<!-- 实验中右上角的小状态 -->
+<div id="miniStatus" class="hidden">
+    <span class="recdot"></span><span id="miniText">录制中</span>
+    <span class="quality" id="qualityMini"></span>
+    <button id="btnAbort" class="ghost">中止</button>
+</div>
+
+<main id="stage">
+
+    <!-- 1. 设置 -->
+    <section id="scrSetup" class="screen">
+        <div class="panel">
+            <h2>实验设置</h2>
+            <div class="form">
+                <label>被试编号<input id="pid" value="P01" maxlength="10"></label>
+                <label>题目套
+                    <select id="set"><option value="A">A 套（阶段 2）</option><option value="B">B 套（阶段 4）</option></select></label>
+                <label>题数
+                    <select id="nItems"><option value="40">全部 40 题</option><option value="20">20 题</option><option value="4">4 题（调试用）</option></select></label>
+                <label>静息基线
+                    <select id="baseLen"><option value="30">30 秒</option><option value="60">60 秒</option><option value="0">跳过（调试用）</option></select></label>
+                <label>练习题
+                    <select id="practice"><option value="1">做 3 道练习</option><option value="0">跳过</option></select></label>
+                <label>每题揭晓答案
+                    <select id="reveal"><option value="1">是（与正式游戏一致）</option><option value="0">否</option></select></label>
+            </div>
+            <p class="note" id="setupNote">可以不连头环直接开始，此时只记录行为数据（用于试测题目）。</p>
+            <div class="actions"><button class="primary big" id="btnStart">开始实验</button></div>
+        </div>
+        <details class="panel">
+            <summary>主试须知</summary>
+            <ol>
+                <li>开始前先确认 4 个通道的信号质量为绿色或黄色。佩戴后等 1–2 分钟再开始。</li>
+                <li>请被试把左手食指放在 <kbd>F</kbd>，右手食指放在 <kbd>J</kbd>，答题时尽量不移动身体、不说话、少眨眼。</li>
+                <li>流程：静息基线 → 练习 → 正式题（每 20 题休息一次）→ 讲解答案。</li>
+                <li>结束后<b>必须</b>让被试看完"答案讲解"页：部分 AI 说法是故意编造的。</li>
+                <li>导出两个文件：行为数据 CSV 和 EEG CSV，放进 <span class="mono">02_bci/tests/日期_阶段2/raw-data/</span>。</li>
+            </ol>
+        </details>
+    </section>
+
+    <!-- 2. 说明 / 基线 / 休息 / 通用消息 -->
+    <section id="scrMsg" class="screen hidden">
+        <div class="msg">
+            <h2 id="msgTitle"></h2>
+            <div id="msgBody"></div>
+            <div class="hint" id="msgHint"></div>
+        </div>
+    </section>
+
+    <!-- 3. 题目 -->
+    <section id="scrTrial" class="screen hidden">
+        <div class="progress"><div id="progBar"></div></div>
+        <div class="counter" id="counter"></div>
+        <div id="fix" class="fix hidden">+</div>
+        <div id="trialBody" class="hidden">
+            <div class="statement" id="statement"></div>
+            <div class="choices" id="choices1">
+                <button class="choice" data-key="f"><kbd>F</kbd>对</button>
+                <button class="choice" data-key="j"><kbd>J</kbd>错</button>
+            </div>
+            <div class="ai hidden" id="aiBox">
+                <div class="aiHead"><span class="aiIcon">AI</span><span id="aiVerdict"></span></div>
+                <div class="aiText" id="aiText"></div>
+            </div>
+            <div class="choices hidden" id="choices2">
+                <button class="choice" data-key="f"><kbd>F</kbd>不改</button>
+                <button class="choice" data-key="j"><kbd>J</kbd>改答案</button>
+            </div>
+            <div class="rating hidden" id="rating1">
+                <p>刚才决定"改不改"的时候，你有多确定？</p>
+                <div class="choices four">
+                    <button class="choice" data-key="1"><kbd>1</kbd>很犹豫</button>
+                    <button class="choice" data-key="2"><kbd>2</kbd>有点犹豫</button>
+                    <button class="choice" data-key="3"><kbd>3</kbd>比较确定</button>
+                    <button class="choice" data-key="4"><kbd>4</kbd>很确定</button>
+                </div>
+            </div>
+            <div class="rating hidden" id="rating2">
+                <p>你之前知道这个知识吗？</p>
+                <div class="choices three">
+                    <button class="choice" data-key="1"><kbd>1</kbd>知道</button>
+                    <button class="choice" data-key="2"><kbd>2</kbd>不确定</button>
+                    <button class="choice" data-key="3"><kbd>3</kbd>不知道</button>
+                </div>
+            </div>
+            <div class="revealBox hidden" id="revealBox"></div>
+        </div>
+    </section>
+
+    <!-- 4. 结束与讲解 -->
+    <section id="scrEnd" class="screen hidden">
+        <div class="panel">
+            <h2>实验结束，谢谢参与！</h2>
+            <p id="endSummary"></p>
+            <div class="actions">
+                <button class="primary" id="btnExportTrials">导出行为数据 CSV</button>
+                <button id="btnExportEEG">导出 EEG CSV</button>
+                <button id="btnRestart">新的被试</button>
+            </div>
+        </div>
+        <div class="panel">
+            <h2>答案讲解（请被试阅读）</h2>
+            <p class="note">这次实验里，有一部分 AI 的说法是<b>故意编造的错误信息</b>，用来观察人在面对 AI 时的判断。下面是每道题的正确答案，标红的是 AI 说错的题。</p>
+            <table id="debrief"><thead><tr><th>#</th><th>题目</th><th>正确答案</th><th>AI 说得对吗</th><th>你的最终答案</th></tr></thead><tbody></tbody></table>
+        </div>
+    </section>
+
+    <!-- 日志 -->
+    <details class="panel" id="logWrap">
+        <summary>日志</summary>
+        <div id="log"></div>
+    </details>
+</main>
+
+<script src="questions.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

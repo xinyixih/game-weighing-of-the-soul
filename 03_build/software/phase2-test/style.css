@@ -1,0 +1,473 @@
+/* 读心冠 · 阶段 2 犹豫判定测试 — 样式 */
+
+:root {
+    --bg: #13111a;
+    --panel: #1c1926;
+    --deep: #0e0c13;
+    --line: #2e2a3b;
+    --ink: #ece8f2;
+    --mut: #9a94a8;
+    --gold: #c9a24a;
+    --good: #4cc38a;
+    --fair: #e0b341;
+    --bad: #e5604f;
+    --ai: #7aa7ff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+}
+
+.note {
+    color: var(--mut);
+    font-size: 13px;
+}
+
+.good {
+    color: var(--good);
+}
+
+.bad {
+    color: var(--bad);
+}
+
+kbd {
+    display: inline-block;
+    min-width: 22px;
+    padding: 0 6px;
+    margin-right: 8px;
+    font: 12px/20px ui-monospace, monospace;
+    text-align: center;
+    color: var(--mut);
+    background: var(--deep);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+}
+
+/* ===== 顶部状态栏 ===== */
+header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+}
+
+header h1 {
+    font-size: 18px;
+    margin: 0 10px 0 0;
+}
+
+header h1 span {
+    color: var(--gold);
+}
+
+.spacer {
+    flex: 1;
+}
+
+.chip {
+    padding: 3px 10px;
+    font-size: 12px;
+    color: var(--mut);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+}
+
+.chip b {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.chip.ok b {
+    color: var(--good);
+}
+
+.chip.warn b {
+    color: var(--fair);
+}
+
+.chip.err b {
+    color: var(--bad);
+}
+
+/* ===== 信号质量小圆点 ===== */
+.quality {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--mut);
+}
+
+.quality .q {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.quality i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--line);
+}
+
+.quality i.good {
+    background: var(--good);
+}
+
+.quality i.fair {
+    background: var(--fair);
+}
+
+.quality i.bad {
+    background: var(--bad);
+}
+
+/* ===== 实验中右上角状态 ===== */
+#miniStatus {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--mut);
+}
+
+.recdot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--bad);
+    animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* ===== 按钮与表单 ===== */
+button,
+select,
+input {
+    font: inherit;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 12px;
+}
+
+button {
+    cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+    border-color: var(--gold);
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+button.primary {
+    background: var(--gold);
+    color: #1a1408;
+    border-color: var(--gold);
+    font-weight: 600;
+}
+
+button.big {
+    padding: 10px 28px;
+    font-size: 16px;
+}
+
+button.ghost {
+    padding: 2px 10px;
+    font-size: 12px;
+    background: transparent;
+}
+
+/* ===== 主区域 ===== */
+#stage {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 20px 40px;
+}
+
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+}
+
+.panel h2 {
+    margin: 0 0 14px;
+    font-size: 15px;
+    color: var(--gold);
+}
+
+.panel summary {
+    cursor: pointer;
+    color: var(--gold);
+}
+
+.panel ol {
+    color: var(--mut);
+    margin: 10px 0 0;
+}
+
+.form {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px 20px;
+}
+
+.form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--mut);
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+/* ===== 说明 / 基线 / 休息 ===== */
+.msg {
+    max-width: 640px;
+    margin: 60px auto;
+    text-align: left;
+}
+
+.msg h2 {
+    font-size: 26px;
+    color: var(--gold);
+    margin: 0 0 16px;
+}
+
+.msg .hint {
+    margin-top: 28px;
+    color: var(--mut);
+}
+
+/* ===== 题目页 ===== */
+#scrTrial {
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.progress {
+    width: 100%;
+    height: 3px;
+    background: var(--line);
+    border-radius: 2px;
+}
+
+#progBar {
+    height: 100%;
+    width: 0;
+    background: var(--gold);
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
+.counter {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--mut);
+    align-self: flex-end;
+}
+
+.fix {
+    margin-top: 22vh;
+    font-size: 64px;
+    font-weight: 300;
+    color: var(--ink);
+}
+
+#trialBody {
+    width: 100%;
+    margin-top: 8vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.statement {
+    max-width: 760px;
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+/* ===== 选项按钮 ===== */
+.choices {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+}
+
+.choices.four,
+.choices.three {
+    gap: 12px;
+}
+
+.choice {
+    min-width: 160px;
+    padding: 14px 22px;
+    font-size: 20px;
+    border-radius: 12px;
+}
+
+.choices.four .choice,
+.choices.three .choice {
+    min-width: 120px;
+    font-size: 16px;
+}
+
+.choice.picked {
+    border-color: var(--gold);
+    color: var(--gold);
+}
+
+/* ===== AI 发言框 ===== */
+.ai {
+    width: 100%;
+    max-width: 680px;
+    margin: 8px 0 28px;
+    padding: 16px 20px;
+    background: var(--deep);
+    border: 1px solid var(--ai);
+    border-radius: 14px;
+    box-shadow: 0 0 24px rgba(122, 167, 255, 0.15);
+}
+
+.aiHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 17px;
+    margin-bottom: 6px;
+}
+
+.aiHead b {
+    color: var(--ai);
+}
+
+.aiIcon {
+    padding: 2px 8px;
+    font: 700 12px ui-monospace, monospace;
+    color: var(--deep);
+    background: var(--ai);
+    border-radius: 6px;
+}
+
+.aiText {
+    font-size: 16px;
+    color: var(--ink);
+}
+
+.ai.thinking .aiHead {
+    color: var(--mut);
+    animation: pulse 1s infinite;
+}
+
+/* ===== 自评 ===== */
+.rating {
+    text-align: center;
+}
+
+.rating p {
+    font-size: 18px;
+    margin: 0 0 16px;
+}
+
+/* ===== 揭晓 ===== */
+.revealBox {
+    margin-top: 8px;
+    padding: 14px 24px;
+    font-size: 20px;
+    background: var(--deep);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+}
+
+/* ===== 结束与讲解 ===== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+th,
+td {
+    padding: 6px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+}
+
+th {
+    color: var(--mut);
+    font-weight: 500;
+}
+
+tr.aiwrong td {
+    background: rgba(229, 96, 79, 0.08);
+}
+
+tr.aiwrong b {
+    color: var(--bad);
+}
+
+/* ===== 日志 ===== */
+#logWrap {
+    margin-top: 24px;
+}
+
+#log {
+    height: 120px;
+    overflow: auto;
+    margin-top: 8px;
+    padding: 8px;
+    font: 12px/1.5 ui-monospace, monospace;
+    color: var(--mut);
+    background: var(--deep);
+    border-radius: 8px;
+}
